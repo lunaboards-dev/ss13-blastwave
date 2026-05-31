@@ -81,7 +81,7 @@ SUBSYSTEM_DEF(air)
 	msg += "} "
 	msg += "\n  Count:{AT:[active_turfs.len]|"
 	msg += "HS:[hotspots.len]|"
-	msg += "EG:[excited_groups.len]|"
+	msg += "EG:[get_amt_excited_groups()]|"
 	msg += "HP:[high_pressure_delta.len]|"
 	msg += "SC:[active_super_conductivity.len]|"
 	msg += "PN:[networks.len]|"
@@ -96,16 +96,15 @@ SUBSYSTEM_DEF(air)
 
 
 /datum/controller/subsystem/air/Initialize()
-	map_loading = FALSE
-	gas_reactions = init_gas_reactions()
-	hotspot_reactions = init_hotspot_reactions()
-
 	// BLASTWAVE EDIT BEGIN - Foxmos init
 	var/fox_ok = call_ext("foxmos", "init_monstermos")()
 	if (fox_ok != "ok")
 		throw EXCEPTION(fox_ok)
 	// BLASTWAVE EDIT END
-
+	map_loading = FALSE
+	gas_reactions = init_gas_reactions()
+	hotspot_reactions = init_hotspot_reactions()
+	foxmos_update_ssair()
 	setup_allturfs()
 	setup_atmos_machinery()
 	setup_pipenets()
@@ -113,6 +112,9 @@ SUBSYSTEM_DEF(air)
 	process_adjacent_rebuild()
 	atmos_handbooks_init()
 	return SS_INIT_SUCCESS
+
+/datum/controller/subsystem/air/proc/foxmos_update_ssair()
+	FOXMOS_PASS_AND_CALL(fm_ssair_update_ssair)
 
 
 /datum/controller/subsystem/air/fire(resumed = FALSE)
@@ -392,8 +394,11 @@ SUBSYSTEM_DEF(air)
 		if (MC_TICK_CHECK)
 			return
 
+// BEGIN BLASTWAVE EDIT - Foxmos
 /datum/controller/subsystem/air/proc/process_excited_groups(resumed = FALSE)
-	if (!resumed)
+	if(process_excited_groups_foxmos(resumed, (Master.current_ticklimit - TICK_USAGE) * 0.01 * world.tick_lag))
+		return
+	/* if (!resumed)
 		src.currentrun = excited_groups.Copy()
 	//cache for sanic speed (lists are references anyways)
 	var/list/currentrun = src.currentrun
@@ -410,7 +415,15 @@ SUBSYSTEM_DEF(air)
 			EG.dismantle()
 		EG.turf_reactions = NONE
 		if (MC_TICK_CHECK)
-			return
+			return */
+
+/datum/controller/subsystem/air/proc/process_excited_groups_foxmos()
+	FOXMOS_PASS_AND_CALL(fm_ssair_process_excited_groups)
+
+/datum/controller/subsystem/air/proc/get_amt_excited_groups()
+	FOXMOS_PASS_AND_CALL(fm_ssair_get_amt_excited_groups)
+
+// END BLASTWAVE EDIT
 
 /datum/controller/subsystem/air/proc/process_rebuilds()
 	//Yes this does mean rebuilding pipenets can freeze up the subsystem forever, but if we're in that situation something else is very wrong

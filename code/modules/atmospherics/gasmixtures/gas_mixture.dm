@@ -38,12 +38,46 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 	/// I am sorry
 	var/pipeline_cycle = -1
 
+	// BEGIN BLASTWAVE EDIT - Foxmos
+	var/_extools_pointer_gasmixture = 0
+	FOXMOS_CACHE(fm_gm_register)
+	FOXMOS_CACHE(fm_gm_unregister)
+	FOXMOS_CACHE(fm_gm_heat_cap)
+	FOXMOS_CACHE(fm_gm_set_min_heat_cap)
+	FOXMOS_CACHE(fm_gm_total_moles)
+	FOXMOS_CACHE(fm_gm_return_pressure)
+	FOXMOS_CACHE(fm_gm_return_temp)
+	FOXMOS_CACHE(fm_gm_return_vol)
+	FOXMOS_CACHE(fm_gm_thermal_energy)
+	FOXMOS_CACHE(fm_gm_archive)
+	FOXMOS_CACHE(fm_gm_merge)
+	FOXMOS_CACHE(fm_gm_remove_ratio)
+	FOXMOS_CACHE(fm_gm_remove)
+	FOXMOS_CACHE(fm_gm_copy_from)
+	FOXMOS_CACHE(fm_gm_share)
+	FOXMOS_CACHE(fm_gm_last_share)
+	FOXMOS_CACHE(fm_gm_get_gasses)
+	FOXMOS_CACHE(fm_gm_set_temp)
+	FOXMOS_CACHE(fm_gm_set_volume)
+	FOXMOS_CACHE(fm_gm_get_moles)
+	FOXMOS_CACHE(fm_gm_set_moles)
+	FOXMOS_CACHE(fm_gm_scrub_into)
+	FOXMOS_CACHE(fm_gm_mark_immutable)
+	FOXMOS_CACHE(fm_gm_mark_vacuum)
+	FOXMOS_CACHE(fm_gm_clear)
+	FOXMOS_CACHE(fm_gm_compare)
+	FOXMOS_CACHE(fm_gm_multiply)
+	FOXMOS_CACHE(fm_gm_create_temp_grad)
+	FOXMOS_CACHE(fm_gm_tick_temp_grad)
+	// END BLASTWAVE EDIT
+
 /datum/gas_mixture/New(volume)
 	gases = new
 	if(!isnull(volume))
 		src.volume = volume
 	if(src.volume <= 0)
 		stack_trace("Created a gas mixture with zero volume!")
+	call_ext(fm_gm_register)(src)
 	reaction_results = new
 
 //listmos procs
@@ -85,10 +119,11 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 
 ///joules per kelvin
 /datum/gas_mixture/proc/heat_capacity(data = MOLES)
-	var/list/cached_gases = gases
+	/*var/list/cached_gases = gases
 	. = 0
 	for(var/_id, gas_data in cached_gases)
-		. += gas_data[data] * gas_data[GAS_META][META_GAS_SPECIFIC_HEAT]
+		. += gas_data[data] * gas_data[GAS_META][META_GAS_SPECIFIC_HEAT]*/
+	FOXMOS_PASS_AND_CALL(fm_gm_heat_cap)
 
 /// Same as above except vacuums return HEAT_CAPACITY_VACUUM
 /datum/gas_mixture/turf/heat_capacity(data = MOLES)
@@ -101,8 +136,9 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 
 /// Calculate moles
 /datum/gas_mixture/proc/total_moles()
-	var/cached_gases = gases
-	TOTAL_MOLES(cached_gases, .)
+	/* var/cached_gases = gases
+	TOTAL_MOLES(cached_gases, .) */
+	FOXMOS_PASS_AND_CALL(fm_gm_total_moles)
 
 /// Checks to see if gas amount exists in mixture.
 /// Do NOT use this in code where performance matters!
@@ -115,19 +151,22 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 
 /// Calculate pressure in kilopascals
 /datum/gas_mixture/proc/return_pressure()
-	if(volume) // to prevent division by zero
+	/* if(volume) // to prevent division by zero
 		var/cached_gases = gases
 		TOTAL_MOLES(cached_gases, .)
 		return . * R_IDEAL_GAS_EQUATION * temperature / volume
-	return 0
+	return 0 */
+	FOXMOS_PASS_AND_CALL(fm_gm_return_pressure)
 
 /// Calculate temperature in kelvins
 /datum/gas_mixture/proc/return_temperature()
-	return temperature
+	// return temperature
+	FOXMOS_PASS_AND_CALL(fm_gm_return_temp)
 
 /// Calculate volume in liters
 /datum/gas_mixture/proc/return_volume()
-	return max(0, volume)
+	//return max(0, volume)
+	FOXMOS_PASS_AND_CALL(fm_gm_return_vol)
 
 /// Gets the gas visuals for everything in this mixture
 /datum/gas_mixture/proc/return_visuals(turf/z_context)
@@ -137,21 +176,24 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 
 /// Calculate thermal energy in joules
 /datum/gas_mixture/proc/thermal_energy()
-	return THERMAL_ENERGY(src) //see code/__DEFINES/atmospherics.dm; use the define in performance critical areas
+	//return THERMAL_ENERGY(src) //see code/__DEFINES/atmospherics.dm; use the define in performance critical areas
+	FOXMOS_PASS_AND_CALL(fm_gm_thermal_energy)
 
 ///Update archived versions of variables. Returns: 1 in all cases
 /datum/gas_mixture/proc/archive()
-	var/list/cached_gases = gases
+	FOXMOS_PASS_AND_CALL(fm_gm_archive)
+	/* var/list/cached_gases = gases
 
 	temperature_archived = temperature
 	for(var/id in cached_gases)
 		cached_gases[id][ARCHIVE] = cached_gases[id][MOLES]
 
-	return TRUE
+	return TRUE */
 
 ///Merges all air from giver into self. Deletes giver. Returns: 1 if we are mutable, 0 otherwise
 /datum/gas_mixture/proc/merge(datum/gas_mixture/giver)
-	if(!giver)
+	FOXMOS_PASS_AND_CALL(fm_gm_merge)
+	/* if(!giver)
 		return FALSE
 
 	//heat transfer
@@ -170,46 +212,61 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 		cached_gases[giver_id][MOLES] += giver_gases[giver_id][MOLES]
 
 	SEND_SIGNAL(src, COMSIG_GASMIX_MERGED)
-	return TRUE
+	return TRUE */
 
 // Set the gas specie within the gas mix to a set amount, if there is none it will be created at the target temp
 /datum/gas_mixture/proc/set_gas(gas_specie, amount)
-	ASSERT_GAS(gas_specie, src)
+	FOXMOS_PASS_AND_CALL(fm_gm_set_moles)
+	/* ASSERT_GAS(gas_specie, src)
 	gases[gas_specie][MOLES] = amount
-	garbage_collect()
+	garbage_collect() */
+
+/datum/gas_mixture/proc/get_moles(gas)
+	FOXMOS_PASS_AND_CALL(fm_gm_get_moles)
 
 /datum/gas_mixture/proc/set_temperature(target_temp)
-	temperature = target_temp
+	FOXMOS_PASS_AND_CALL(fm_gm_set_temp)
+	// temperature = target_temp
 
 /// Add a specific amount of moles to specified gas or add a new gas to the mix
 /// amount is added so make it negative to remove
 /datum/gas_mixture/proc/adjust_gas(gas, amount)
-	ASSERT_GAS(gas, src)
+	set_moles(gas, get_moles(gas) + amt)
+	/* ASSERT_GAS(gas, src)
 	gases[gas][MOLES] += QUANTIZE(amount)
-	garbage_collect()
+	garbage_collect() */
 
 /// Add a specific amount of moles to all the gasses present or add a new gas to the mix
 ///gases_moles is an associative list of gas species to their amount to be added
 /datum/gas_mixture/proc/adjust_multiple_gases(list/gases_moles)
 	for(var/gas_specie in gases_moles)
-		ASSERT_GAS(gas_specie, src)
-		gases[gas_specie][MOLES] += gases_moles[gas_specie]
-	garbage_collect()
+		adjust_gas(gas_specie, gases_moles[gas_specie])
+		/*ASSERT_GAS(gas_specie, src)
+		gases[gas_specie][MOLES] += gases_moles[gas_specie]*/
+	//garbage_collect()
 
 
 /// Modify the gas list as to convert moles of gas species A to gas species B
 /// reactant and product are the gas species to convert and conversion_amount is the amount to be converted
 /datum/gas_mixture/proc/convert_gas(datum/gas/reactant, datum/gas/product, conversion_amount)
-	var/list/cached_gases = gases
+	adjust_gas(reactant, -conversion_amount)
+	adjust_gas(product, conversion_amount)
+	/* var/list/cached_gases = gases
 	assert_gases(reactant, product)
 	cached_gases[reactant][MOLES] -= QUANTIZE(conversion_amount)
 	cached_gases[product][MOLES] += QUANTIZE(conversion_amount)
-	garbage_collect()
+	garbage_collect() */
+
+/datum/gas_mixture/proc/__remove(removed, amount)
+	FOXMOS_PASS_AND_CALL(fm_gm_remove)
 
 ///Proportionally removes amount of gas from the gas_mixture.
 ///Returns: gas_mixture with the gases removed
 /datum/gas_mixture/proc/remove(amount)
-	var/sum
+	var/datum/gas_mixture/removed = new type
+	__remove(removed, amount)
+	return removed
+	/* var/sum
 	var/list/cached_gases = gases
 	TOTAL_MOLES(cached_gases, sum)
 	amount = min(amount, sum) //Can not take more air than tile has!
@@ -227,12 +284,18 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 	garbage_collect()
 
 	SEND_SIGNAL(src, COMSIG_GASMIX_REMOVED)
-	return removed
+	return removed */
 
+/datum/gas_mixture/proc/__remove_ratio(removed, ratio)
+	FOXMOS_PASS_AND_CALL(fm_gm_remove_ratio)
 ///Proportionally removes amount of gas from the gas_mixture.
 ///Returns: gas_mixture with the gases removed
 /datum/gas_mixture/proc/remove_ratio(ratio)
-	if(ratio <= 0)
+	var/datum/gas_mixture/removed = new type
+	__remove_ratio(removed, ratio)
+
+	return removed
+	/* if(ratio <= 0)
 		var/datum/gas_mixture/removed = new(volume)
 		return removed
 	ratio = min(ratio, 1)
@@ -250,7 +313,7 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 	garbage_collect()
 
 	SEND_SIGNAL(src, COMSIG_GASMIX_REMOVED)
-	return removed
+	return removed */
 
 ///Removes an amount of a specific gas from the gas_mixture.
 ///Returns: gas_mixture with the gas removed
