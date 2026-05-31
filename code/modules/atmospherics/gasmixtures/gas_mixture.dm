@@ -71,6 +71,7 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 	FOXMOS_CACHE(fm_gm_tick_temp_grad)
 	FOXMOS_CACHE(fm_gm_remove_specific)
 	FOXMOS_CACHE(fm_gm_remove_specific_ratio)
+	FOXMOS_CACHE(fm_gm_temp_share)
 	// END BLASTWAVE EDIT
 
 /datum/gas_mixture/New(volume)
@@ -539,8 +540,9 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 ///Performs temperature sharing calculations (via conduction) between two gas_mixtures assuming only 1 boundary length
 ///Returns: new temperature of the sharer
 /datum/gas_mixture/proc/temperature_share(datum/gas_mixture/sharer, conduction_coefficient, sharer_temperature, sharer_heat_capacity)
+	FOXMOS_PASS_AND_CALL(fm_gm_temp_share)
 	//transfer of thermal energy (via conduction) between self and sharer
-	if(sharer)
+	/* if(sharer)
 		sharer_temperature = sharer.temperature_archived
 	var/temperature_delta = temperature_archived - sharer_temperature
 	if(abs(temperature_delta) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
@@ -557,7 +559,7 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 				sharer.temperature = sharer_temperature
 				/* if (initial(sharer.gc_share))
 					sharer.garbage_collect() */
-	return sharer_temperature
+	return sharer_temperature */
 	//thermal energy of the system (self and sharer) is unchanged
 
 ///Compares sample to self to see if within acceptable ranges that group processing may be enabled
@@ -671,7 +673,7 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 /datum/gas_mixture/proc/gas_pressure_minimum_transfer(datum/gas_mixture/output_air)
 	var/resulting_energy = output_air.thermal_energy() + (MOLAR_ACCURACY / total_moles() * thermal_energy())
 	var/resulting_capacity = output_air.heat_capacity() + (MOLAR_ACCURACY / total_moles() * heat_capacity())
-	return (output_air.total_moles() + MOLAR_ACCURACY) * R_IDEAL_GAS_EQUATION * (resulting_energy / resulting_capacity) / output_air.volume
+	return (output_air.total_moles() + MOLAR_ACCURACY) * R_IDEAL_GAS_EQUATION * (resulting_energy / resulting_capacity) / output_air.return_volume()
 
 
 /** Returns the amount of gas to be pumped to a specific container.
@@ -685,12 +687,14 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 	var/our_moles = total_moles()
 	var/output_moles = output_air.total_moles()
 	var/output_pressure = output_air.return_pressure()
+	var/temperature = return_temperature()
+	var/output_temp = output_air.return_temperature()
 
 	if(our_moles <= 0 || temperature <= 0)
 		return FALSE
 
 	var/pressure_delta = 0
-	if(output_air.temperature <= 0 || output_moles <= 0)
+	if(output_temp <= 0 || output_moles <= 0)
 		ignore_temperature = TRUE
 		pressure_delta = target_pressure
 	else
@@ -700,18 +704,18 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 		return FALSE
 
 	if(ignore_temperature)
-		return (pressure_delta*output_air.volume)/(temperature * R_IDEAL_GAS_EQUATION)
+		return (pressure_delta*output_air.return_volume())/(temperature * R_IDEAL_GAS_EQUATION)
 
 	// Lower and upper bound for the moles we must transfer to reach the pressure. The answer is bound to be here somewhere.
-	var/pv = target_pressure * output_air.volume
+	var/pv = target_pressure * output_air.return_volume()
 	/// The PV/R part in the equation we will use later. Counted early because pv/(r*t) might not be equal to pv/r/t, messing our lower and upper limit.
 	var/pvr = pv / R_IDEAL_GAS_EQUATION
 	// These works by assuming our gas has extremely high heat capacity
 	// and the resultant gasmix will hit either the highest or lowest temperature possible.
 
 	/// This is the true lower limit, but numbers still can get lower than this due to floats.
-	var/lower_limit = max((pvr / max(temperature, output_air.temperature)) - output_moles, 0)
-	var/upper_limit = (pvr / min(temperature, output_air.temperature)) - output_moles // In theory this should never go below zero, the pressure_delta check above should account for this.
+	var/lower_limit = max((pvr / max(temperature, output_temp)) - output_moles, 0)
+	var/upper_limit = (pvr / min(temperature, output_temp)) - output_moles // In theory this should never go below zero, the pressure_delta check above should account for this.
 
 	lower_limit = max(lower_limit - ATMOS_PRESSURE_ERROR_TOLERANCE, 0)
 	upper_limit += ATMOS_PRESSURE_ERROR_TOLERANCE
@@ -794,11 +798,11 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 /// Pumps gas from src to output_air. Amount depends on target_pressure
 /datum/gas_mixture/proc/pump_gas_to(datum/gas_mixture/output_air, target_pressure, specific_gas = null, datum/gas_mixture/output_pipenet_air = null)
 	var/datum/gas_mixture/input_air = specific_gas ? remove_specific_ratio(specific_gas, 1) : src
-	var/temperature_delta = abs(input_air.temperature - output_air.temperature)
+	var/temperature_delta = abs(input_air.return_temperature() - output_air.return_temperature())
 	var/datum/gas_mixture/removed
 
 	var/transfer_moles_output = input_air.gas_pressure_calculate(output_air, target_pressure, temperature_delta <= 5)
-	var/transfer_moles_pipenet = output_pipenet_air?.volume ? input_air.gas_pressure_calculate(output_pipenet_air, target_pressure, temperature_delta <= 5) : 0
+	var/transfer_moles_pipenet = output_pipenet_air?.return_volume() ? input_air.gas_pressure_calculate(output_pipenet_air, target_pressure, temperature_delta <= 5) : 0
 	var/transfer_moles = max(transfer_moles_output, transfer_moles_pipenet)
 
 	if(specific_gas)
@@ -823,10 +827,10 @@ GLOBAL_LIST_INIT(gaslist_cache, init_gaslist_cache())
 		return FALSE
 	//Can not have a pressure delta that would cause output_pressure > input_pressure
 	target_pressure = output_starting_pressure + min(target_pressure - output_starting_pressure, (input_starting_pressure - output_starting_pressure)/2)
-	var/temperature_delta = abs(temperature - output_air.temperature)
+	var/temperature_delta = abs(return_temperature() - output_air.return_temperature())
 
 	var/transfer_moles_output = gas_pressure_calculate(output_air, target_pressure, temperature_delta <= 5)
-	var/transfer_moles_pipenet = output_pipenet_air?.volume ? gas_pressure_calculate(output_pipenet_air, target_pressure, temperature_delta <= 5) : 0
+	var/transfer_moles_pipenet = output_pipenet_air?.return_volume() ? gas_pressure_calculate(output_pipenet_air, target_pressure, temperature_delta <= 5) : 0
 	var/transfer_moles = max(transfer_moles_output, transfer_moles_pipenet)
 
 	//Actually transfer the gas
