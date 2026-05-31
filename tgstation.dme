@@ -644,6 +644,7 @@
 #include "code\__HELPERS\sorts\helpers.dm"
 #include "code\__HELPERS\sorts\sort_instance.dm"
 #include "code\__HELPERS\~nova_helpers\areas.dm"
+#include "code\__HELPERS\~nova_helpers\foxmos.dm"
 #include "code\__HELPERS\~nova_helpers\is_helpers.dm"
 #include "code\__HELPERS\~nova_helpers\level_traits.dm"
 #include "code\__HELPERS\~nova_helpers\logging.dm"

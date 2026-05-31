@@ -1,5 +1,5 @@
 SUBSYSTEM_DEF(air)
-	name = "Atmospherics"
+	name = "Atmospherics (Foxmos)"
 	dependencies = list(
 		/datum/controller/subsystem/mapping,
 		/datum/controller/subsystem/atoms,
@@ -61,6 +61,10 @@ SUBSYSTEM_DEF(air)
 	var/list/reaction_handbook
 	var/list/gas_handbook
 
+	FOXMOS_CACHE(fm_ssair_update_ssair)
+	FOXMOS_CACHE(fm_ssair_get_amt_excited_groups)
+	FOXMOS_CACHE(fm_ssair_process_excited_groups)
+
 
 /datum/controller/subsystem/air/stat_entry(msg)
 	msg += "\n  Cost:{"
@@ -95,6 +99,12 @@ SUBSYSTEM_DEF(air)
 	map_loading = FALSE
 	gas_reactions = init_gas_reactions()
 	hotspot_reactions = init_hotspot_reactions()
+
+	// BLASTWAVE EDIT BEGIN - Foxmos init
+	var/fox_ok = call_ext("foxmos", "init_monstermos")()
+	if (fox_ok != "ok")
+		throw EXCEPTION(fox_ok)
+	// BLASTWAVE EDIT END
 
 	setup_allturfs()
 	setup_atmos_machinery()
