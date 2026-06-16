@@ -215,6 +215,10 @@
 	if((methods & INGEST) && HAS_TRAIT(exposed_mob, TRAIT_WATER_ADAPTATION) && reac_volume >= 4)
 		exposed_mob.adjust_wet_stacks(0.15 * reac_volume)
 
+	if(isslime(exposed_mob))
+		var/mob/living/basic/slime/exposed_slime = exposed_mob
+		exposed_slime.apply_water()
+
 #undef WATER_TO_WET_STACKS_FACTOR_TOUCH
 #undef WATER_TO_WET_STACKS_FACTOR_VAPOR
 

@@ -422,6 +422,18 @@
 /obj/effect/abstract/liquid_turf/immutable/set_height(new_height)
 	height = new_height
 
+/obj/effect/abstract/liquid_turf/proc/movable_exited(atom/movable/AM, direction)
+	SIGNAL_HANDLER
+	if(isobserver(AM))
+		return
+	if (liquid_state >= LIQUID_STATE_WAIST)
+		// if(iscarbon(AM))
+			/// var/mob/living/cabon/C = AM
+			// we should probably make cats angry here too
+	else if(liquid_state >= LIQUID_STATE_ANKLES && isslime(AM))
+		var/mob/living/basic/slime/S = AM
+			// stop killing slime
+
 /obj/effect/abstract/liquid_turf/proc/movable_entered(datum/source, atom/movable/AM)
 	SIGNAL_HANDLER
 	var/turf/T = source
@@ -439,8 +451,13 @@
 		if(iscarbon(AM))
 			var/mob/living/carbon/C = AM
 			C.apply_status_effect(/datum/status_effect/water_affected)
+			//if (liquid_state >= LIQUID_STATE_WAIST)
+				// we should probably make cats angry here
 	else if (isliving(AM))
 		var/mob/living/L = AM
+		if (isslime(AM))
+			var/mob/living/basic/slime/S = AM
+			// apply status effect
 		if(prob(7) && !(L.movement_type & FLYING))
 			L.slip(1 SECONDS, T, NO_SLIP_WHEN_WALKING, 2 SECONDS, TRUE)
 	if(fire_state)
@@ -480,6 +497,7 @@
 		RegisterSignal(my_turf, COMSIG_ATOM_ENTERED, PROC_REF(movable_entered))
 		RegisterSignal(my_turf, COMSIG_TURF_MOB_FALL, PROC_REF(mob_fall))
 		RegisterSignal(my_turf, COMSIG_ATOM_EXAMINE, PROC_REF(examine_turf))
+		//RegisterSignal(my_turf, COMSIG_ATOM_EXITED, PROC_REF())
 		SSliquids.add_active_turf(my_turf)
 
 		SEND_SIGNAL(my_turf, COMSIG_TURF_LIQUIDS_CREATION, src)
