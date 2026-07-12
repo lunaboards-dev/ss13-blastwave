@@ -7,3 +7,7 @@ else
     print("Rustup already installed, no need to reinstall.")
 end
 os.execute("rustup target add i686-unknown-linux-gnu")
+
+function rust_compile(dir)
+    os.execute("cd buildtmp/"..dir.."; PKG_CONFIG_ALLOW_CROSS=1 cargo build --release --target i686-unknown-linux-gnu")
+end
