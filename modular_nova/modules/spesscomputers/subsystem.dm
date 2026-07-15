@@ -16,6 +16,7 @@ SUBSYSTEM_DEF(spesscomputers)
 	var/sc_tick
 	var/sc_add_php
 	var/sc_create_tty
+	var/sc_pump_events
 	var/list/queued_signals = list()
 	var/list/queued_returns = list()
 	// info about our last tick update
@@ -35,6 +36,7 @@ SUBSYSTEM_DEF(spesscomputers)
 	bin_name = world.system_type == "windows" ? "./spesscomputers.dll" : "./libspesscomputers.so"
 	sc_tick = load_ext(bin_name, "byond:spess_tick")
 	sc_create_tty = load_ext(bin_name, "byond:spess_create_tty")
+	sc_pump_events = load_ext(bin_name, "byond:spess_ipc_pump")
 
 	if (!call_ext(bin_name, "byond:spess_init")(src, list(
 		"execpath" = "./spesscore/spesscore",
@@ -58,8 +60,10 @@ SUBSYSTEM_DEF(spesscomputers)
 
 
 /datum/controller/subsystem/spesscomputers/fire(resumed = FALSE)
-	//call_ext(sc_tick)(src)
+	call_ext(sc_tick)(src)
 	PumpErrors()
+	while (call_ext(sc_pump_events)(src))
+		PumpErrors()
 
 /datum/controller/subsystem/spesscomputers/proc/BwoinkatizeMeCaptain(bwoink)
 	bwoinks += bwoink
