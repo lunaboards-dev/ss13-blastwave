@@ -1,5 +1,7 @@
 #!/usr/bin/env lua
 
+local lfs = require("lfs")
+
 args = {}
 
 for i=1, #arg do
@@ -34,14 +36,15 @@ if args.clean then
 	print("Clean complete.")
 
 else
-	if not os.execute "[[ -e tgstation.dme ]]" then
+    if not lfs.attributes("tgstation.dme") then
 		panic("Script must be run from repo root.")
 	end
 
-	os.execute("mkdir -p buildtmp")
+	--os.execute("mkdir -p buildtmp")
+    lfs.mkdir("buildtmp")
 
 	local scripts = {}
-	for line in io.popen("ls tools/linux_build_tools", "r"):lines() do
+	for line in lfs.dir("tools/linux_build_tools") do--io.popen("ls tools/linux_build_tools", "r"):lines() do
         if line:match("%.lua$") then
 		    table.insert(scripts, line)
         end
