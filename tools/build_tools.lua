@@ -21,7 +21,7 @@ print [[
       |\/|    ____
    .__.. \   /\  /
     \_   /__/  \/
-    _/  __   __/      
+    _/  __   __/
 🥒 /___/____/
 ]]
 end
@@ -32,7 +32,7 @@ if args.clean then
 	fox()
 
 	print("Clean complete.")
-	
+
 else
 	if not os.execute "[[ -e tgstation.dme ]]" then
 		panic("Script must be run from repo root.")
@@ -42,17 +42,19 @@ else
 
 	local scripts = {}
 	for line in io.popen("ls tools/linux_build_tools", "r"):lines() do
-		table.insert(scripts, line)
+        if line:match("%.lua$") then
+		    table.insert(scripts, line)
+        end
 	end
 
 	table.sort(scripts)
 
 	for i=1, #scripts do
-		print("\27[1m:: "..scripts[i].."\27[0m")
+		print("\27[1m:: \27[36mPRE:\27[39m "..scripts[i].."\27[0m")
 		dofile("tools/linux_build_tools/"..scripts[i])
 	end
 
 	fox()
-	
+
 	print("Build complete!")
 end
