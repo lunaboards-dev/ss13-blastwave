@@ -5,6 +5,9 @@
 /config/dev_preferences.json
 /config/dev_preferences.json.updatebac
 
+# Do NOT commit admins.txt, and don't use it in production!
+/config/admins.txt
+
 #Ignore everything in datafolder and subdirectories
 /data/**/*
 /tmp/**/*
